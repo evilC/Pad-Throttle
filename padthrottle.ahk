@@ -1,10 +1,30 @@
-﻿#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+﻿; Pad Throttle 0.1 By Clive "evilC" Galway - evilc@evilc.com
+; An app to make a joypad (Such as an XBOX controller) behave like a throttle and rudders
+
+; Edit the following lines for your desired setup
+
+JoyID := 3				; Stick ID to use for input
+JoyAxisX := 1			; Axis on your pad to use for rudder
+JoyAxisY := 2			; Axis on your pad to use for throttle
+DeadZoneX := 0			; DeadZone of the X axis (0 -> 1, so 10% is 0.1)
+DeadZoneY := 0.1		; Deadzone of the Y axis
+AmplifyAmount := 1.3	; How much to amplify each axis. Used to convert a round (gamepad) range to a square (joystick) one.
+InvertY := 0			; Invert the throttle (may need depending on settings in user.cfg cl_joystick_invert_throttle setting)
+RelativeThrottle := 1	; Enable relative throttle
+StopButton := 9			; In relative mode, sets throttle to 0. Set this to 0 to disable this feature
+ThrottleSpeed := 40		; Speed the Relative Throttle moves at. Higher is slower
+
+; Users should not edit below this line
+
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 ; #Warn  ; Enable warnings to assist with detecting common errors.
 ;SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 ; Init the PPJoy / vJoy library
 #include <VJoy_lib>
+
+axis_list_ahk := Array("X","Y","Z","R","U","V")
 
 throttle := 0
 
@@ -17,7 +37,7 @@ LoadPackagedLibrary() {
     }
     hDLL := DLLCall("LoadLibrary", "Str", dllpath)
     if (!hDLL) {
-        MsgBox, [%A_ThisFunc%] LoadLibrary %dllpath% fail
+        MsgBox, [%A_ThisFunc%] Failed to find DLL at %dllpath%
     }
     return hDLL
 } 
@@ -61,27 +81,39 @@ vjoy_id := 1
 ; Init Vjoy library
 VJoy_Init(vjoy_id)
 
+; Bind stop button if enabled
+if (StopButton){
+	Hotkey, *~%JoyID%Joy%StopButton%, stop_throttle
+}
+
 Loop {
 	;GetKeyState, tmpx, 4JoyX
 	;GetKeyState, tmpy, 4JoyY
-	GetKeyState, tmpx, 3JoyX
-	GetKeyState, tmpy, 3JoyY
+	tmpx := axis_list_ahk[JoyAxisX]
+	tmpy := axis_list_ahk[JoyAxisY]
+	GetKeyState, tmpx, %JoyID%Joy%tmpx%
+	GetKeyState, tmpy, %JoyID%Joy%tmpy%
+	
+	if (InvertY){
+		tmpy := 100 - tmpy
+	}
 
 	; Convert from 0 -> 100 to -1 -> +1
 	tmpx := (tmpx / 50) - 1
 	tmpy := (tmpy / 50) - 1
 	
 	; Apply deadzone
-	;outx := deadzone_adjust(tmpx,0.1)
-	outx := tmpx
-	outy := deadzone_adjust(tmpy,0.1)
+	outx := deadzone_adjust(tmpx,DeadZoneX)
+	outy := deadzone_adjust(tmpy,DeadZoneY)
 	
 	; Circle to square amplify
-	outx := outx * 1.3
-	outy := outy * 1.3
+	outx := outx * AmplifyAmount
+	outy := outy * AmplifyAmount
 	
 	; Absolute to relative throttle
-	outy := throttle + (outy / 40)
+	if (RelativeThrottle){
+		outy := throttle + (outy / ThrottleSpeed)
+	}
 
 	; Limit to -1 -> +1
 	if (abs(outx) > 1){
@@ -109,8 +141,7 @@ Loop {
 	sleep, 10
 }
 
-; XBOX controller stop on click of stick
-3Joy9::
+stop_throttle:
 	throttle := 0
 	return
 
