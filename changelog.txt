@@ -4,6 +4,9 @@ Key:
 = : Change / Fix
 + : Added feature
 
+0.3 19th Jul 2013
++ You can now rotate inputs. Used to compensate for the fact that if you move your thumb left on an XBOX controller, you get more like up left.
+
 0.2 19th July 2013
 + You can now specify a button to switch between relative and absolute throttle mode.
 Very useful - Absolute is best for combat, but relative for long-distance travel

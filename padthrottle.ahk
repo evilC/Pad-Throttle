@@ -1,4 +1,4 @@
-﻿; Pad Throttle 0.2
+﻿; Pad Throttle 0.3
 ; By Clive "evilC" Galway - evilc@evilc.com
 ; An app to make a joypad (Such as an XBOX controller) behave like a throttle and rudders
 
@@ -9,14 +9,22 @@ JoyAxisX := 1			; Axis on your pad to use for rudder
 JoyAxisY := 2			; Axis on your pad to use for throttle
 DeadZoneX := 0.1		; DeadZone of the X axis (0 -> 1, so 10% is 0.1)
 DeadZoneY := 0.1		; Deadzone of the Y axis
-AmplifyAmount := 1.3	; How much to amplify each axis. Used to convert a round (gamepad) range to a square (joystick) one.
+AmplifyAmount := 1.5	; How much to amplify each axis. Used to convert a round (gamepad) range to a square (joystick) one.
 InvertY := 0			; Invert the throttle (may need depending on settings in user.cfg cl_joystick_invert_throttle setting)
 RelativeThrottle := 1	; Enable relative throttle as default
 ThrottleSpeed := 40		; Speed the Relative Throttle moves at. Higher is slower
 StopButton := 9			; Specifies which button is bound to stop. In relative mode, sets throttle to 0. Set this to 0 to disable this feature
-ModeButton := 5			; Specifies which button is bound to switch throttle mode. Switches between relative and absolute mode
+ModeButton := 5			; Specifies which button is bound to switch throttle mode. Switches between relative and absolute mode.
+
+; Amount to rotate the input axis by. In degrees, 0 is none, 20 is 20deg anti-clockwise, 340 is 20deg clockwise
+; Used to correct the fact that moving your thumb left on an XBOX controller is more like left and up a bit.
+AxisRotate := 345		; Seems about right for XBOX left stick and Logitech G13
+
 
 ; Users should not edit below this line
+
+; Convert Axis from degrees to radians
+AxisRotate :=  AxisRotate * 3.141592653589793238 / 180
 
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 ; #Warn  ; Enable warnings to assist with detecting common errors.
@@ -91,24 +99,32 @@ if (StopButton){
 }
 
 Loop {
-	;GetKeyState, tmpx, 4JoyX
-	;GetKeyState, tmpy, 4JoyY
-	tmpx := axis_list_ahk[JoyAxisX]
-	tmpy := axis_list_ahk[JoyAxisY]
-	GetKeyState, tmpx, %JoyID%Joy%tmpx%
-	GetKeyState, tmpy, %JoyID%Joy%tmpy%
+	;GetKeyState, outx, 4JoyX
+	;GetKeyState, outy, 4JoyY
+	outx := axis_list_ahk[JoyAxisX]
+	outy := axis_list_ahk[JoyAxisY]
+	GetKeyState, outx, %JoyID%Joy%outx%
+	GetKeyState, outy, %JoyID%Joy%outy%
 	
 	if (InvertY){
-		tmpy := 100 - tmpy
+		outy := 100 - outy
 	}
 
 	; Convert from 0 -> 100 to -1 -> +1
-	tmpx := (tmpx / 50) - 1
-	tmpy := (tmpy / 50) - 1
+	outx := (outx / 50) - 1
+	outy := (outy / 50) - 1
 	
+	; Rotate the axis
+	if (AxisRotate){
+		rotx := outx * cos(AxisRotate) - outy * sin(AxisRotate)
+		roty := outx * sin(AxisRotate) + outy * cos(AxisRotate)
+		outx := rotx
+		outy := roty
+	}
+
 	; Apply deadzone
-	outx := deadzone_adjust(tmpx,DeadZoneX)
-	outy := deadzone_adjust(tmpy,DeadZoneY)
+	outx := deadzone_adjust(outx,DeadZoneX)
+	outy := deadzone_adjust(outy,DeadZoneY)
 	
 	; Circle to square amplify
 	outx := outx * AmplifyAmount
