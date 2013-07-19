@@ -4,5 +4,10 @@ Key:
 = : Change / Fix
 + : Added feature
 
+0.2 19th July 2013
++ You can now specify a button to switch between relative and absolute throttle mode.
+Very useful - Absolute is best for combat, but relative for long-distance travel
+In absolute, push full up, click toggle button, then release stick to set hands-free full speed.
+
 0.1 19th July 2013
 * Initial release

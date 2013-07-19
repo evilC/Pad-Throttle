@@ -1,4 +1,5 @@
-﻿; Pad Throttle 0.1 By Clive "evilC" Galway - evilc@evilc.com
+﻿; Pad Throttle 0.2
+; By Clive "evilC" Galway - evilc@evilc.com
 ; An app to make a joypad (Such as an XBOX controller) behave like a throttle and rudders
 
 ; Edit the following lines for your desired setup
@@ -6,13 +7,14 @@
 JoyID := 3				; Stick ID to use for input
 JoyAxisX := 1			; Axis on your pad to use for rudder
 JoyAxisY := 2			; Axis on your pad to use for throttle
-DeadZoneX := 0			; DeadZone of the X axis (0 -> 1, so 10% is 0.1)
+DeadZoneX := 0.1		; DeadZone of the X axis (0 -> 1, so 10% is 0.1)
 DeadZoneY := 0.1		; Deadzone of the Y axis
 AmplifyAmount := 1.3	; How much to amplify each axis. Used to convert a round (gamepad) range to a square (joystick) one.
 InvertY := 0			; Invert the throttle (may need depending on settings in user.cfg cl_joystick_invert_throttle setting)
-RelativeThrottle := 1	; Enable relative throttle
-StopButton := 9			; In relative mode, sets throttle to 0. Set this to 0 to disable this feature
+RelativeThrottle := 1	; Enable relative throttle as default
 ThrottleSpeed := 40		; Speed the Relative Throttle moves at. Higher is slower
+StopButton := 9			; Specifies which button is bound to stop. In relative mode, sets throttle to 0. Set this to 0 to disable this feature
+ModeButton := 5			; Specifies which button is bound to switch throttle mode. Switches between relative and absolute mode
 
 ; Users should not edit below this line
 
@@ -27,6 +29,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 axis_list_ahk := Array("X","Y","Z","R","U","V")
 
 throttle := 0
+relative_mode := RelativeThrottle
 
 LoadPackagedLibrary() {
 	SplitPath, A_AhkPath,,tmp
@@ -84,6 +87,7 @@ VJoy_Init(vjoy_id)
 ; Bind stop button if enabled
 if (StopButton){
 	Hotkey, *~%JoyID%Joy%StopButton%, stop_throttle
+	Hotkey, *~%JoyID%Joy%ModeButton%, throttle_mode
 }
 
 Loop {
@@ -110,9 +114,11 @@ Loop {
 	outx := outx * AmplifyAmount
 	outy := outy * AmplifyAmount
 	
-	; Absolute to relative throttle
-	if (RelativeThrottle){
-		outy := throttle + (outy / ThrottleSpeed)
+	if (relative_mode){
+		; Absolute to relative throttle
+		if (RelativeThrottle){
+			outy := throttle + (outy / ThrottleSpeed)
+		}
 	}
 
 	; Limit to -1 -> +1
@@ -143,6 +149,10 @@ Loop {
 
 stop_throttle:
 	throttle := 0
+	return
+
+throttle_mode:
+	relative_mode := 1 - relative_mode
 	return
 
 ; Waggle x axis for game binding
